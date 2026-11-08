@@ -1,9 +1,8 @@
-
 name: Personal Daily Automation
 
 on:
   schedule:
-    - cron: '30 1 * * *'
+    - cron: '30 1 * * *' # 7:00 AM Asia/Kolkata
   workflow_dispatch:
 
 permissions:
@@ -12,46 +11,63 @@ permissions:
 jobs:
   daily-update:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate daily message
+      - name: Generate WhatsApp-ready MD message
         run: |
-          mkdir -p daily
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from urllib.parse import quote
+          from pathlib import Path
 
-          TODAY=$(TZ=Asia/Kolkata date '+%Y-%m-%d')
-          DATE=$(TZ=Asia/Kolkata date '+%A, %d %B %Y')
-          TIME=$(TZ=Asia/Kolkata date '+%I:%M %p IST')
+          now = datetime.now(ZoneInfo("Asia/Kolkata"))
+          quotes = [
+              "Discipline turns strategy into consistent results.",
+              "Consistency is the foundation of sustainable progress.",
+              "Good decisions compound when followed by disciplined execution.",
+              "Clarity of purpose makes daily execution more effective.",
+              "Strong businesses are built through thoughtful decisions and steady action."
+          ]
+          quote_of_day = quotes[now.timetuple().tm_yday % len(quotes)]
 
-          cat > "daily/${TODAY}.md" <<EOF
-          # Personal Daily Update
+          message = f"""Good morning, Sir! 🙏
 
-          **Date:** ${DATE}
-          **Generated:** ${TIME}
+          {now.strftime('%A, %d %B %Y')}
 
-          ## Good Morning!
+          Quote of the Day: “{quote_of_day}”
 
-          Your daily personal reminder is ready.
+          Sri Aditya Pharmachem – Pharma Industry Intelligence
+          https://hrsriadityapharmachem-ux.github.io/pharma-md-intelligence/
 
-          ### Today's Priorities
-          - [ ] Review today's schedule.
-          - [ ] Identify your top three priorities.
-          - [ ] Complete one important task.
-          - [ ] Review your finances and commitments.
+          If convenient, may we spend 10 minutes today reviewing key pharma industry news and business developments relevant to Sri Aditya Pharmachem?
 
-          ### Personal Note
-          Start with clarity. Focus on progress, not perfection.
+          Wishing you a productive day, Sir."""
 
-          ---
-          Generated automatically by Personal Daily Automation.
-          EOF
+          message = "\n".join(line.strip() for line in message.splitlines())
+          share_url = "https://wa.me/?text=" + quote(message, safe="")
+          output = f"""# Daily WhatsApp Message
 
-      - name: Save daily update
+          **Generated:** {now.strftime('%d %B %Y, %I:%M %p IST')}
+
+          ## Message
+          {message}
+
+          ## Open WhatsApp
+          [Open WhatsApp with message pre-filled]({share_url})
+
+          Select the saved MD contact and tap **Send**.
+          """
+          Path("daily").mkdir(exist_ok=True)
+          Path(f"daily/{now.strftime('%Y-%m-%d')}.md").write_text(output, encoding="utf-8")
+          PY
+
+      - name: Save daily message
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add daily/
-          git diff --cached --quiet || git commit -m "Add daily personal update"
+          git diff --cached --quiet || git commit -m "Generate daily WhatsApp-ready MD message"
           git push
