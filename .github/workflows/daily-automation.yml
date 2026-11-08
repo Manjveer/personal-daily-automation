@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '30 1 * * *' # 7:00 AM Asia/Kolkata
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/daily-automation.yml'
 
 permissions:
   contents: write
